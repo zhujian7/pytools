@@ -2,8 +2,6 @@ import subprocess
 import json
 import click
 
-# List of repositories to check
-REPOS = ['stolostron/ocm']  # Specify the repositories
 
 # Function to list open PRs containing "Konflux" in the title
 def list_prs(repo):
