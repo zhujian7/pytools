@@ -22,7 +22,17 @@ pip install -r requirements.txt
 
 ### Examples
 
-1. Find all PRs whose titles containing `Konflux test` in repos `stolostron/ocm` and `stolostron/managed-serviceaccount`, change the PRs target branch from `backplane-2.8` to `main`, and leave a comment `/lgtm`.
+1. Find all PRs whose titles containing `Konflux test` and whose target branch is `backplane-2.8` in repos `stolostron/ocm` and `stolostron/managed-serviceaccount`, change the PRs target branch from `backplane-2.8` to `main`, and leave a comment `/lgtm`.
+   
 ```
 python -m apps.changetargetbranch --branch-before-changing=backplane-2.8 --branch-after-changing=main --approve stolostron/ocm stolostron/managed-serviceaccount --extra-keyword="Konflux test"
 ```
+
+2. Find all PRs whose titles containing `Konflux test` and whose target branch is `backplane-2.7` in repos `stolostron/ocm` and `stolostron/managed-serviceaccount`, **NOT** change the PRs target branch, and leave a comment `/lgtm`.
+   
+```
+python -m apps.changetargetbranch --branch-before-changing=backplane-2.7 --branch-after-changing=backplane-2.7 --approve stolostron/ocm stolostron/managed-serviceaccount --extra-keyword="Konflux test"
+```
+
+***Notes:***
+- `extra-keyword` is not required, if not provided, the tool will find the keywords `Update Konflux references` and `Red Hat Konflux` in the PRs' title.
