@@ -58,10 +58,16 @@ def main(repos, approve, branch_before_changing, branch_after_changing, extra_ke
         for pr in prs:
             if 'Update Konflux references' in pr['title'] or 'Red Hat Konflux' in pr['title'] or extra_keyword in pr['title']:
                 # Check if the target branch is matching the one before changing
+
                 if pr['baseRefName'] == branch_before_changing:
-                    print(f"PR #{pr['number']} in {repo} targets {branch_before_changing}. Changing to {branch_after_changing}.")
-                    change_base_branch(repo, pr['number'], branch_after_changing)
-                    comment_lgtm(repo, pr['number'])
+                    if branch_before_changing == branch_after_changing:
+                        print(f"PR #{pr['number']} in {repo} already targets {branch_before_changing}. Skipping.")
+                    else:
+                        print(f"PR #{pr['number']} in {repo} targets {branch_before_changing}. Changing to {branch_after_changing}.")
+                        change_base_branch(repo, pr['number'], branch_after_changing)
+                    if approve:
+                        print(f"Approving PR #{pr['number']} in {repo}.")
+                        comment_lgtm(repo, pr['number'])
 
 if __name__ == '__main__':
     main()
