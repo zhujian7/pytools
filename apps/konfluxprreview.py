@@ -99,14 +99,15 @@ def all_files_in_tekton(files):
 @click.command()
 @click.argument("repos", nargs=-1)
 @click.option("--approve", is_flag=True, default=False, help="set to true will comment /lgtm on the PR")
+@click.option("--seedling", is_flag=True, default=False, help="set to true will update PR title to start with 🌱")
 @click.option("--extra-keyword", type=click.STRING, help="the extra keyword to search for in PR titles")
 # Main function to list and modify PRs
-# Example usage: python -m apps.changetargetbranch --approve --extra-keyword="Konflux ..." stolostron/ocm stolostron/managed-serviceaccount
-def main(repos, approve, extra_keyword):
+# Example usage: python -m apps.konfluxprreview --approve --seedling --extra-keyword="Konflux Test" stolostron/ocm stolostron/managed-serviceaccount
+def main(repos, approve, seedling, extra_keyword):
     branches_before_changing = ["backplane-2.8", "release-2.13"]
     branch_after_changing = "main"
     print(f"Repos: {repos}, Approve: {approve}, Branches Before: {branches_before_changing}, Branch After: {branch_after_changing}")
-    keywords = ['Update Konflux references', 'Red Hat Konflux', 'chore(deps): update konflux references']
+    keywords = ['Update Konflux references', 'Red Hat Konflux', 'update konflux references']
     if extra_keyword:
         keywords.append(extra_keyword)
         print(f"Keywords: {keywords}")
@@ -119,6 +120,8 @@ def main(repos, approve, extra_keyword):
             "stolostron/managedcluster-import-controller", # xuezhaojun
             "stolostron/clusterlifecycle-state-metrics", # haoqing0110
             "stolostron/klusterlet-addon-controller", # zhiweiyin318
+            "stolostron/cluster-proxy-addon", # xuezhaojun
+            "stolostron/cluster-proxy", # xuezhaojun
         ]
     for repo in repos:
         prs = list_prs(repo)
@@ -133,9 +136,6 @@ def main(repos, approve, extra_keyword):
                 title_match = True
             print(f"PR #{pr['number']} in {repo}, content_match: {content_match}, title_match: {title_match}, title: {pr['title']}")
             if title_match and content_match:
-                # Check if the PR title starts with ":seeding:" and update it if not
-                update_pr_title(repo, pr['number'], pr['title'])
-
                 # if pr['baseRefName'] == branch_before_changing:
                 if pr['baseRefName'] in branches_before_changing:
                     if pr['baseRefName'] == branch_after_changing:
@@ -143,6 +143,10 @@ def main(repos, approve, extra_keyword):
                     else:
                         print(f"PR #{pr['number']} in {repo} targets {pr['baseRefName']}. Changing to {branch_after_changing}.")
                         change_base_branch(repo, pr['number'], branch_after_changing)
+
+                if seedling:
+                    # Check if the PR title starts with ":seeding:" and update it if not
+                    update_pr_title(repo, pr['number'], pr['title'])
 
                 if approve:
                     lgtm, approved = has_lgtm_and_approved_labels(repo, pr['number'])
