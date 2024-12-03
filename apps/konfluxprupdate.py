@@ -79,7 +79,7 @@ def clone_repo_from_fork(repo, fork_user, repo_dir, from_branch, to_branch):
 
 
 # Function to format a YAML file
-def format_yaml_file(file_path, remove_elements=True):
+def format_yaml_file(file_path):
     with open(file_path, 'r') as f:
         data = yaml.load(f)
 
