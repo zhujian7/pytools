@@ -107,12 +107,13 @@ def main(repos, approve, seedling, extra_keyword):
     branches_before_changing = ["backplane-2.8", "release-2.13"]
     branch_after_changing = "main"
     print(f"Repos: {repos}, Approve: {approve}, Branches Before: {branches_before_changing}, Branch After: {branch_after_changing}")
-    keywords = ['Update Konflux references', 'Red Hat Konflux', 'update konflux references']
+    keywords = ['Update Konflux references', 'Red Hat Konflux', 'update konflux references', 'update konflux files']
     if extra_keyword:
         keywords.append(extra_keyword)
         print(f"Keywords: {keywords}")
     # if repos is not provided, use the default list
     if not repos:
+
         repos = [
             "stolostron/ocm", # zhujian7
             "stolostron/managed-serviceaccount", # zhujian7
@@ -123,6 +124,7 @@ def main(repos, approve, seedling, extra_keyword):
             "stolostron/cluster-proxy-addon", # xuezhaojun
             "stolostron/cluster-proxy", # xuezhaojun
         ]
+
     for repo in repos:
         prs = list_prs(repo)
         for pr in prs:
