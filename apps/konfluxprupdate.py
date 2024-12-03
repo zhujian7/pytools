@@ -14,7 +14,7 @@ yaml.indent(mapping=2, sequence=4, offset=2)
 acm_mce_release = ["release-2.13", "backplane-2.8"]
 
 def local_branch_name(from_branch, to_branch):
-    return f"konflux_cel_{from_branch}_{to_branch}"
+    return f"konflux_update_{from_branch}_{to_branch}"
 
 
 # Function to check if the "upstream" remote exists, if not, add it
@@ -347,8 +347,13 @@ def main(repos, github_user, from_branch, to_branch):
         "stolostron/clusterlifecycle-state-metrics": "haoqing0110",
         "stolostron/klusterlet-addon-controller": "zhiweiyin318",
     }
+
     if repos:
         reposmap = {repo: reposmap[repo] for repo in repos}
+    else:
+        # remove "stolostron/klusterlet-addon-controller" since its default branch is not backplane-2.8
+        reposmap.pop("stolostron/klusterlet-addon-controller")
+
     print(f"Repos: {reposmap}, GitHub User: {github_user}, From Branch: {from_branch}, To Branch: {to_branch}")
 
     tmp_dir = "_tmp"
