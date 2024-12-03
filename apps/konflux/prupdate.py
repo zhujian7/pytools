@@ -8,8 +8,8 @@ import json
 # Initialize YAML parser
 yaml = YAML()
 yaml.preserve_quotes = True
-yaml.width = 4096
-yaml.indent(mapping=2, sequence=4, offset=2)
+yaml.width = 256
+yaml.indent(mapping=2, sequence=2, offset=0)
 
 acm_mce_release = ["release-2.13", "backplane-2.8"]
 
