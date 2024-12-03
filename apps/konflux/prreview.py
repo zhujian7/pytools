@@ -102,7 +102,7 @@ def all_files_in_tekton(files):
 @click.option("--seedling", is_flag=True, default=False, help="set to true will update PR title to start with 🌱")
 @click.option("--extra-keyword", type=click.STRING, help="the extra keyword to search for in PR titles")
 # Main function to list and modify PRs
-# Example usage: python -m apps.konfluxprreview --approve --seedling --extra-keyword="Konflux Test" stolostron/ocm stolostron/managed-serviceaccount
+# Example usage: python -m apps.konflux.prreview --approve --seedling --extra-keyword="Konflux Test" stolostron/ocm stolostron/managed-serviceaccount
 def main(repos, approve, seedling, extra_keyword):
     branches_before_changing = ["backplane-2.8", "release-2.13"]
     branch_after_changing = "main"

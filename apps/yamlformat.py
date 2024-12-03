@@ -3,7 +3,7 @@ from ruamel.yaml import YAML
 
 # Define the list of repository directories
 repos = [
-    "/Users/jiazhu/go/src/open-cluster-management.io/ocm",
+    "/Users/jiazhu/go/src/github.com/zhujian7/pytools/_tmp/cluster-proxy",
     # "/Users/jiazhu/go/src/open-cluster-management.io/managed-serviceaccount",
     ]
 
@@ -92,13 +92,13 @@ for repo in repos:
                 # Process the YAML file
                 process_yaml_file(file_path)
                 print(f"Updated {file_path}")
-    # Iterate over each file in the repository to find files with .rhtap extension
-    for root, dirs, files in os.walk(repo):
-        for file_name in files:
-            if file_name.endswith('.rhtap'):
-                file_path = os.path.join(root, file_name)
-                # Process the Dockerfile
-                process_dockerfile(file_path)
-                print(f"Updated {file_path}")
-    else:
-        print(f"Directory {tekton_dir} does not exist in {repo}")
+    # # Iterate over each file in the repository to find files with .rhtap extension
+    # for root, dirs, files in os.walk(repo):
+    #     for file_name in files:
+    #         if file_name.endswith('.rhtap'):
+    #             file_path = os.path.join(root, file_name)
+    #             # Process the Dockerfile
+    #             process_dockerfile(file_path)
+    #             print(f"Updated {file_path}")
+    #         else:
+    #             print(f"Directory {tekton_dir} does not exist in {repo}")

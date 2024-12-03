@@ -38,7 +38,7 @@ A list of repositories to process, if not specified, all foundation repositories
 - Find all PRs in all foundation repos, change the PRs target branch from `backplane-2.8`/`release-2.13` to `main`.
 
 ```python
-python -m apps.konfluxprreview
+python -m apps.konflux.prreview
 ```
 
 Note: Default foundation repos list:
@@ -57,7 +57,7 @@ stolostron/cluster-proxy # xuezhaojun
 - Find all PRs in repo `stolostron/ocm` , change the PRs target branch from `backplane-2.8`/`release-2.13` to `main`.
 
 ```python
-python -m apps.konfluxprreview stolostron/ocm
+python -m apps.konflux.prreview stolostron/ocm
 ```
 
 #### keywords in PRs title --extra-keywords
@@ -75,7 +75,7 @@ Red Hat Konflux
 - Find all PRs whose title containing the default keywords or `Konflux Test` in all foundation repos, change the PRs target branch from `backplane-2.8`/`release-2.13` to `main`.
 
 ```python
-python -m apps.konfluxprreview --extra-keywords="Konflux Test"
+python -m apps.konflux.prreview --extra-keywords="Konflux Test"
 ```
 
 #### comment `/lgtm` --approve
@@ -85,7 +85,7 @@ A flag to leave a `/lgtm` and `approve` comment in PRs, if not specified, no com
 - Find all PRs in all foundation repos, change the PRs target branch from `backplane-2.8`/`release-2.13` to `main`, and leave a `/lgtm` comment in the PRs.
 
 ```python
-python -m apps.konfluxprreview --approve
+python -m apps.konflux.prreview --approve
 ```
 
 #### PRs title 🌱 prefix --seedling
@@ -95,7 +95,7 @@ A flag to add a prefix 🌱 to PRs title if the PRs title do not start with 🌱
 - Find all PRs in all foundation repos, change the PRs target branch from `backplane-2.8`/`release-2.13` to `main`, and add a prefix 🌱 to PRs title if the PRs title do not start with 🌱.
 
 ```python
-python -m apps.konfluxprreview --seedling
+python -m apps.konflux.prreview --seedling
 ```
 
 ## 🛠️ Create Konflux PRs to update konflux files
@@ -136,7 +136,7 @@ There are 4 options/arguments you can specify:
 This is used for the first time to update the CEL from `backplane-2.8` to `main` after a new release starts and the konflux onboarding PR for this release is merged.
 
 ```python
-python -m apps.konfluxprupdate --from_branch=backplane-2.8 --to_branch=main
+python -m apps.konflux.prupdate --from_branch=backplane-2.8 --to_branch=main
 ```
 
 #### Example2: create a PR for all foundation MCE repos to update the CEL from `main` to `backplane-2.8`
@@ -144,7 +144,7 @@ python -m apps.konfluxprupdate --from_branch=backplane-2.8 --to_branch=main
 This is used for update the CEL from `main` to `backplane-2.8` after the ff changes to the new release, and the old release CEL is still matching the `main`.
 
 ```python
-python -m apps.konfluxprupdate --from_branch=main --to_branch=backplane-2.8
+python -m apps.konflux.prupdate --from_branch=main --to_branch=backplane-2.8
 ```
 
 #### Example3: process the foundation ACM repos
@@ -153,7 +153,7 @@ Because the default `from_branch` is `backplane-2.8`, which is the value for MCE
 To process the ACM repos, we need to specify the `from_branch` and the repos.
 
 ```python
-python -m apps/konfluxprupdate --from_branch=release-2.13 --to_branch=main stolostron/klusterlet-addon-controller
+python -m apps.konflux.prupdate --from_branch=release-2.13 --to_branch=main stolostron/klusterlet-addon-controller
 ```
 
 #### Example4: not change the CEL
@@ -162,7 +162,15 @@ If you want to create a PR to update the tekton files without changing the CEL, 
 The following command will only format the tekton files, add the OWNER file to the .tekton folder, and purge unnecessary files in the `.tekton` folder for the `backplane-2.7` branch of the `cluster-proxy` and `cluster-proxy-addon` repos.
 
 ```python
-python -m apps/konfluxprupdate --from_branch=backplane-2.7 --to_branch=backplane-2.7 stolostron/cluster-proxy stolostron/cluster-proxy-addon
+python -m apps.konflux.prupdate --from_branch=backplane-2.7 --to_branch=backplane-2.7 stolostron/cluster-proxy stolostron/cluster-proxy-addon
+```
+
+## 🛠️ Update skip_if_only_changed for prow tests
+
+prowtestskip.py is a tool to help update the `skip_if_only_changed` for prow tests steps.
+
+```python
+python -m apps.prow.skip_if_only_changed --path=/Users/test/go/src/github.com/openshift/release cluster-proxy-addon cluster-proxy
 ```
 
 ## 📝 What can’t these tools do?
