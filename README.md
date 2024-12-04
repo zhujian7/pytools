@@ -126,10 +126,11 @@ stolostron/klusterlet-addon-controller # zhiweiyin318
 
 There are 4 options/arguments you can specify:
 
-1. `--github_user`: Your GitHub username, if not specified, the default value is `zhujian7`. The tool will clone the repos from the forked repo of the user.
-2. `--from_branch`: The branch name of the konflux CEL to be updated from, if not specified, the default value is `backplane-2.8`
-3. `--to_branch`: The branch name of the konflux CEL to be updated to, if not specified, the default value is `main`. It is also the PR's target branch.
-4. `repositories`: A list of repositories to process, if not specified, all foundation **MCE** repositories will be processed.
+1. `--github-user`: Your GitHub username, if not specified, the default value is `zhujian7`. The tool will clone the repos from the forked repo of the user.
+2. `--from-branch`: The branch name of the konflux CEL to be updated from, if not specified, the default value is `backplane-2.8`
+3. `--to-branch`: The branch name of the konflux CEL to be updated to, if not specified, the default value is `main`. It is also the PR's target branch.
+4. `--dry-run`: Run the tool in dry-run mode, will not create PRs and push changes to the forked repo when specified.
+5. `repositories`: A list of repositories to process, if not specified, all foundation **MCE** repositories will be processed.
 
 #### Example1: create a PR for all foundation MCE repos to update the CEL from `backplane-2.8` to `main`
 
@@ -163,6 +164,14 @@ The following command will only format the tekton files, add the OWNER file to t
 
 ```python
 python -m apps.konflux.prupdate --from_branch=backplane-2.7 --to_branch=backplane-2.7 stolostron/cluster-proxy stolostron/cluster-proxy-addon
+```
+
+#### Example5: dry-run mode
+
+If you want to test the tool without creating PRs and pushing changes to the forked repo, you can specify the `--dry-run` flag.
+
+```python
+python -m apps.konflux.prupdate --from_branch=backplane-2.8 --to_branch=main --dry-run stolostron/ocm
 ```
 
 ## 🛠️ Update skip_if_only_changed for prow tests

@@ -89,7 +89,7 @@ def format_yaml_file(file_path):
 
 
 # Function to format all *.yaml files in the .tekton folder
-def format_tekton_files(repo_dir, from_branch, to_branch):
+def format_tekton_files(repo_dir, from_branch, to_branch, dry_run=False):
     tekton_dir = os.path.join(repo_dir, '.tekton')
     if not os.path.exists(tekton_dir):
         print(f"No .tekton directory found in {repo_dir}. Skipping...")
@@ -108,12 +108,12 @@ def format_tekton_files(repo_dir, from_branch, to_branch):
         print(f"No changes for formatting tekton files to commit in {repo_dir}. Skipping...")
         return ""
     message = "Formatting all tekton files"
-    commit_and_push_changes(repo_dir, from_branch, to_branch, message)
+    commit_and_push_changes(repo_dir, from_branch, to_branch, message, dry_run)
     return message
 
 
 # Function to find and replace "backplane-2.8" with "main" in .tekton files
-def update_tekton_files(repo_dir, from_branch, to_branch):
+def update_tekton_files(repo_dir, from_branch, to_branch, dry_run=False):
     tekton_dir = os.path.join(repo_dir, '.tekton')
     if not os.path.exists(tekton_dir):
         print(f"No .tekton directory found in {repo_dir}. Skipping...")
@@ -142,46 +142,12 @@ def update_tekton_files(repo_dir, from_branch, to_branch):
         print(f"No changes to commit in {repo_dir}. Skipping...")
         return ""
     message = f"Update konflux CEL from {from_branch} to {to_branch}"
-    commit_and_push_changes(repo_dir, from_branch, to_branch, message)
-    return message
-
-
-# Function to find and replace "backplane-2.8" with "main" in .tekton files
-def update_tekton_files(repo_dir, from_branch, to_branch):
-    tekton_dir = os.path.join(repo_dir, '.tekton')
-    if not os.path.exists(tekton_dir):
-        print(f"No .tekton directory found in {repo_dir}. Skipping...")
-        return ""
-
-    # Iterate through the files in the .tekton directory
-    for root, dirs, files in os.walk(tekton_dir):
-        for file in files:
-            if not file.endswith('.yaml'):
-                continue
-
-            file_path = os.path.join(root, file)
-            with open(file_path, 'r') as f:
-                content = f.read()
-
-            # Replace from_branch with to_branch
-            source = f'target_branch == "{from_branch}"'
-            target = f'target_branch == "{to_branch}"'
-            if source in content:
-                print(f"Updating {file_path}...")
-                updated_content = content.replace(source, target)
-                with open(file_path, 'w') as f:
-                    f.write(updated_content)
-
-    if not has_changes(repo_dir):
-        print(f"No changes to commit in {repo_dir}. Skipping...")
-        return ""
-    message = f"Update konflux CEL from {from_branch} to {to_branch}"
-    commit_and_push_changes(repo_dir, from_branch, to_branch, message)
+    commit_and_push_changes(repo_dir, from_branch, to_branch, message, dry_run)
     return message
 
 
 # Function to delete unnecessary files in the .tekton directory
-def purge_tekton_files(repo_dir, from_branch, to_branch):
+def purge_tekton_files(repo_dir, from_branch, to_branch, dry_run=False):
     tekton_dir = os.path.join(repo_dir, '.tekton')
     if not os.path.exists(tekton_dir):
         print(f"No .tekton directory found in {repo_dir}. Skipping...")
@@ -211,11 +177,11 @@ def purge_tekton_files(repo_dir, from_branch, to_branch):
         print(f"No changes to commit in {repo_dir}. Skipping...")
         return ""
     message = f"Purge konflux files"
-    commit_and_push_changes(repo_dir, from_branch, to_branch, message)
+    commit_and_push_changes(repo_dir, from_branch, to_branch, message, dry_run)
     return message
 
 
-def create_owners_file(repo_dir, from_branch, to_branch):
+def create_owners_file(repo_dir, from_branch, to_branch, dry_run=False):
     # Define the path to the OWNERS file in the .tekton directory
     owners_file_path = os.path.join(repo_dir, '.tekton', 'OWNERS')
     
@@ -250,7 +216,7 @@ reviewers:
         
     print("OWNERS file created successfully.")
     message = f"Create an OWNERS file for tekton files"
-    commit_and_push_changes(repo_dir, from_branch, to_branch, message)
+    commit_and_push_changes(repo_dir, from_branch, to_branch, message, dry_run)
     return message
 
 
@@ -260,10 +226,14 @@ def has_changes(repo_dir):
 
 
 # Function to create a new branch, commit changes, and push the branch
-def commit_and_push_changes(repo_dir, from_branch, to_branch, message):
+def commit_and_push_changes(repo_dir, from_branch, to_branch, message, dry_run=False):
     subprocess.run(['git', '-C', repo_dir, 'add', '.'], check=True)
     subprocess.run(['git', '-C', repo_dir, 'commit', '--signoff', '-m', message], check=True)
     local_branch = local_branch_name(from_branch, to_branch)
+
+    if dry_run:
+        print(f"DRY-RUN: Pushing changes to {local_branch}")
+        return
     subprocess.run(['git', '-C', repo_dir, 'push', '-u', 'origin', local_branch, '-f'], check=True)
 
 
@@ -302,7 +272,10 @@ def comment_cc(repo, pr_number, owners):
 
 
 # Function to create a PR and cc the owner to review
-def create_pull_request(repo, github_user, from_branch, to_branch, messages, owners):
+def create_pull_request(repo, github_user, from_branch, to_branch, messages, owners, dry_run=False):
+    if dry_run:
+        print(f"DRY-RUN: Creating PR for {repo} with branch {local_branch_name(from_branch, to_branch)}")
+        return
     local_branch = local_branch_name(from_branch, to_branch)
     body = construct_pr_body(repo, from_branch, to_branch, messages)
     try:
@@ -335,7 +308,8 @@ def construct_pr_body(repo, from_branch, to_branch, messages):
 @click.option('--github_user', type=click.STRING, default='zhujian7', prompt='Your github user name', help="The GitHub username of the forked repository")
 @click.option('--from_branch', type=click.STRING, default='backplane-2.8', help="The branch name of the konflux CEL to be updated from")
 @click.option('--to_branch', type=click.STRING, default='main', help="The branch name of the konflux CEL to be updated to")
-def main(repos, github_user, from_branch, to_branch):
+@click.option("--dry-run", is_flag=True, default=False, help="set to true will not create PR and push changes")
+def main(repos, github_user, from_branch, to_branch, dry_run):
     reposmap = {
         # supportted repos, repo: owners
         
@@ -375,14 +349,14 @@ def main(repos, github_user, from_branch, to_branch):
         # funcs = [format_tekton_files, update_tekton_files, create_owners_file]
         messages = []
         for func in funcs:
-            m = func(repo_dir, from_branch, to_branch)
+            m = func(repo_dir, from_branch, to_branch, dry_run)
             if m:
                 messages.append(m)
 
         # Step 4: Check if a PR already exists for the branch
         if not pr_exists(repo, from_branch, to_branch):
             # If no PR exists, create one
-            create_pull_request(repo, github_user, from_branch, to_branch, messages, owners)
+            create_pull_request(repo, github_user, from_branch, to_branch, messages, owners, dry_run)
 
 
 if __name__ == '__main__':
