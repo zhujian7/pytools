@@ -73,6 +73,51 @@ def update_pr_title(repo, pr_number, title):
             print(f"Error updating title of PR #{pr_number} in {repo}: {e}")
 
 
+# Function to check if the PR has any failed status checks, and comment on the PR to notify the owners
+def check_failed_status(repo, pr_number, owners):
+    try:
+        # Get the list of checks for this PR using the GitHub CLI
+        result = subprocess.run(
+            ['gh', 'pr', 'view', str(pr_number), '--repo', repo, '--json', 'statusCheckRollup'],
+            capture_output=True, text=True, check=True
+        )
+
+        if result.returncode != 0:
+            print(f"Error retrieving PR status for {pr_url}: {result.stderr}")
+            return False
+    
+        # Parse the JSON response
+        pr_data = json.loads(result.stdout)
+    
+        # Check if the status checks have failed
+        failed_checks = []
+        
+        for index, check in enumerate(pr_data.get('statusCheckRollup', {})):
+            status = check.get('conclusion', check.get('state'))
+            if not status:
+                continue
+            if status.lower() == 'failure':
+                name = check.get('name', check.get('context', str(index)))
+                failed_checks.append(name)
+        print(f"PR #{pr_number} in {repo} has the following failed checks: {failed_checks}")
+        
+        if failed_checks:
+            # Comment on the PR with the failed checks with format:
+            # "Hello @owner1 @owner2, the following checks have failed for this PR: check1, check2"
+            owners_mention = ' '.join([f'@{owner}' for owner in owners])
+            failed_checks_str = ', '.join(failed_checks)
+            comment = f"Hello {owners_mention}, the following checks have failed for this PR: {failed_checks_str}"
+            subprocess.run(
+                ['gh', 'pr', 'comment', str(pr_number), '--repo', repo, '--body', comment],
+                check=True
+            )
+            print(f"Commented on PR #{pr_number} in {repo} with failed checks.")
+            return True
+    except subprocess.CalledProcessError as e:
+        print(f"Error checking status for PR #{pr_number} in {repo}: {e}")
+        return False
+
+
 # Function to get a list of changed files in a PR
 def get_changed_files(repo, pr_number):
     try:
@@ -100,10 +145,11 @@ def all_files_in_tekton(files):
 @click.argument("repos", nargs=-1)
 @click.option("--approve", is_flag=True, default=False, help="set to true will comment /lgtm on the PR")
 @click.option("--seedling", is_flag=True, default=False, help="set to true will update PR title to start with 🌱")
+@click.option("--check-status", is_flag=True, default=True, help="set to true will check if PR has failed status checks")
 @click.option("--extra-keyword", type=click.STRING, help="the extra keyword to search for in PR titles")
 # Main function to list and modify PRs
 # Example usage: python -m apps.konflux.prreview --approve --seedling --extra-keyword="Konflux Test" stolostron/ocm stolostron/managed-serviceaccount
-def main(repos, approve, seedling, extra_keyword):
+def main(repos, approve, seedling, check_status, extra_keyword):
     branches_before_changing = ["backplane-2.8", "release-2.13"]
     branch_after_changing = "main"
     print(f"Repos: {repos}, Approve: {approve}, Branches Before: {branches_before_changing}, Branch After: {branch_after_changing}")
@@ -111,21 +157,27 @@ def main(repos, approve, seedling, extra_keyword):
     if extra_keyword:
         keywords.append(extra_keyword)
         print(f"Keywords: {keywords}")
-    # if repos is not provided, use the default list
-    if not repos:
 
-        repos = [
-            "stolostron/ocm", # zhujian7
-            "stolostron/managed-serviceaccount", # zhujian7
-            "stolostron/multicloud-operators-foundation", # elgnay
-            "stolostron/managedcluster-import-controller", # xuezhaojun
-            "stolostron/clusterlifecycle-state-metrics", # haoqing0110
-            "stolostron/klusterlet-addon-controller", # zhiweiyin318
-            "stolostron/cluster-proxy-addon", # xuezhaojun
-            "stolostron/cluster-proxy", # xuezhaojun
-        ]
+    reposmap = {
+        # supportted repos, repo: owners
+        
+        "stolostron/ocm": ["zhujian7", "xuezhaojun"],
+        "stolostron/managed-serviceaccount": ["zhujian7", "xuezhaojun"],
+        "stolostron/multicloud-operators-foundation": ["elgnay"],
+        "stolostron/managedcluster-import-controller": ["xuezhaojun"],
+        "stolostron/cluster-proxy-addon": ["xuezhaojun"],
+        "stolostron/cluster-proxy": ["xuezhaojun"],
+        "stolostron/clusterlifecycle-state-metrics": ["haoqing0110"],
+        "stolostron/klusterlet-addon-controller": ["zhujian7", "zhiweiyin318"],
+    }
 
-    for repo in repos:
+    if repos:
+        reposmap = {repo: reposmap[repo] for repo in repos}
+
+    print(f"Repos: {reposmap}")
+
+
+    for repo, owners in reposmap.items():
         prs = list_prs(repo)
         for pr in prs:
             title_match = False
@@ -138,7 +190,6 @@ def main(repos, approve, seedling, extra_keyword):
                 title_match = True
             print(f"PR #{pr['number']} in {repo}, content_match: {content_match}, title_match: {title_match}, title: {pr['title']}")
             if title_match and content_match:
-                # if pr['baseRefName'] == branch_before_changing:
                 if pr['baseRefName'] in branches_before_changing:
                     if pr['baseRefName'] == branch_after_changing:
                         print(f"PR #{pr['number']} in {repo} already targets {branch_after_changing}. Skipping.")
@@ -150,7 +201,12 @@ def main(repos, approve, seedling, extra_keyword):
                     # Check if the PR title starts with ":seeding:" and update it if not
                     update_pr_title(repo, pr['number'], pr['title'])
 
-                if approve:
+                ci_failed = False
+                if check_status:
+                    # Check if the PR has any failed status checks
+                   ci_failed = check_failed_status(repo, pr['number'], owners)
+
+                if approve and not ci_failed:
                     lgtm, approved = has_lgtm_and_approved_labels(repo, pr['number'])
                     if lgtm and approved:
                         print(f"PR #{pr['number']} in {repo} already has 'lgtm' and 'approved' labels. Skipping.")
