@@ -288,11 +288,12 @@ def pr_exists(repo, from_branch, to_branch):
 
 
 # Function to comment "/cc" on a PR
-def comment_cc(repo, pr_number, cc_user):
+def comment_cc(repo, pr_number, owners):
     try:
-        # Using gh command to comment "/lgtm" on the PR
+        # Using gh command to comment "/cc @user1 @user2" on the PR
+        owners_mention = ' '.join([f'@{owner}' for owner in owners])
         subprocess.run(
-            ['gh', 'pr', 'comment', str(pr_number), '--repo', repo, '--body', '/cc @' + cc_user],
+            ['gh', 'pr', 'comment', str(pr_number), '--repo', repo, '--body', f"/cc {owners_mention}"],
             check=True
         )
         print(f"Successfully commented '/cc' on PR #{pr_number} in {repo}.")
@@ -301,7 +302,7 @@ def comment_cc(repo, pr_number, cc_user):
 
 
 # Function to create a PR and cc the owner to review
-def create_pull_request(repo, github_user, from_branch, to_branch, messages, owner):
+def create_pull_request(repo, github_user, from_branch, to_branch, messages, owners):
     local_branch = local_branch_name(from_branch, to_branch)
     body = construct_pr_body(repo, from_branch, to_branch, messages)
     try:
@@ -315,7 +316,7 @@ def create_pull_request(repo, github_user, from_branch, to_branch, messages, own
 
         pr_number = pr_exists(repo, from_branch, to_branch)
         if pr_number:
-            comment_cc(repo, pr_number, owner)
+            comment_cc(repo, pr_number, owners)
     except subprocess.CalledProcessError as e:
         print(f"Error creating PR for {repo}: {e}")
 
@@ -336,16 +337,16 @@ def construct_pr_body(repo, from_branch, to_branch, messages):
 @click.option('--to_branch', type=click.STRING, default='main', help="The branch name of the konflux CEL to be updated to")
 def main(repos, github_user, from_branch, to_branch):
     reposmap = {
-        # supportted repos, repo: owner
+        # supportted repos, repo: owners
         
-        "stolostron/ocm": "zhujian7",
-        "stolostron/managed-serviceaccount": "zhujian7",
-        "stolostron/multicloud-operators-foundation": "elgnay",
-        "stolostron/managedcluster-import-controller": "xuezhaojun",
-        "stolostron/cluster-proxy-addon": "xuezhaojun",
-        "stolostron/cluster-proxy": "xuezhaojun",
-        "stolostron/clusterlifecycle-state-metrics": "haoqing0110",
-        "stolostron/klusterlet-addon-controller": "zhiweiyin318",
+        "stolostron/ocm": ["zhujian7", "xuezhaojun"],
+        "stolostron/managed-serviceaccount": ["zhujian7", "xuezhaojun"],
+        "stolostron/multicloud-operators-foundation": ["elgnay"],
+        "stolostron/managedcluster-import-controller": ["xuezhaojun"],
+        "stolostron/cluster-proxy-addon": ["xuezhaojun"],
+        "stolostron/cluster-proxy": ["xuezhaojun"],
+        "stolostron/clusterlifecycle-state-metrics": ["haoqing0110"],
+        "stolostron/klusterlet-addon-controller": ["zhujian7", "zhiweiyin318"],
     }
 
     if repos:
@@ -362,7 +363,7 @@ def main(repos, github_user, from_branch, to_branch):
         os.makedirs(tmp_dir)
 
     # for repo in repos:
-    for repo, owner in reposmap.items():
+    for repo, owners in reposmap.items():
         repo_url = repo
         repo_dir = os.path.join(tmp_dir, repo.split('/')[1]) # Use repo name as directory name
 
@@ -381,7 +382,7 @@ def main(repos, github_user, from_branch, to_branch):
         # Step 4: Check if a PR already exists for the branch
         if not pr_exists(repo, from_branch, to_branch):
             # If no PR exists, create one
-            create_pull_request(repo, github_user, from_branch, to_branch, messages, owner)
+            create_pull_request(repo, github_user, from_branch, to_branch, messages, owners)
 
 
 if __name__ == '__main__':
