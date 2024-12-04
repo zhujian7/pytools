@@ -41,7 +41,7 @@ A list of repositories to process, if not specified, all foundation repositories
 python -m apps.konflux.prreview
 ```
 
-Note: Default foundation repos list:
+Note: Default foundation repos list, you the input repo is not in the list, you need to add it to the 'reposmap':
 
 ```yaml
 stolostron/ocm # zhujian7
@@ -86,6 +86,14 @@ A flag to leave a `/lgtm` and `approve` comment in PRs, if not specified, no com
 
 ```python
 python -m apps.konflux.prreview --approve
+```
+
+#### cc the repo owners to review the PR when there are failed CI checks --check-status
+
+After the tool comments `/lgtm` and `approve` in the PRs, we expect the PRs to be merged automatically by prow. However, if there are any failed CI checking in the PRs, prow will not merge the PRs, which requires manual intervention. This flag is used to check the PRs status and cc the repo owners to handle the failed CI checks.
+
+```python
+python -m apps.konflux.prreview --check-status stolostron/ocm
 ```
 
 #### PRs title 🌱 prefix --seedling

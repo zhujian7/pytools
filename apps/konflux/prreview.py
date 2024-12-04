@@ -170,12 +170,12 @@ def main(repos, approve, seedling, check_status, extra_keyword):
         "stolostron/clusterlifecycle-state-metrics": ["haoqing0110"],
         "stolostron/klusterlet-addon-controller": ["zhujian7", "zhiweiyin318"],
     }
-
     if repos:
-        reposmap = {repo: reposmap[repo] for repo in repos}
-
-    print(f"Repos: {reposmap}")
-
+        try:
+            reposmap = {repo: reposmap[repo] for repo in repos}
+        except KeyError as e:
+            print(f"Error: Repo {e} not found in the list of supported repos. please add it to the 'reposmap' dictionary manually.")
+            return
 
     for repo, owners in reposmap.items():
         prs = list_prs(repo)

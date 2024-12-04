@@ -322,9 +322,12 @@ def main(repos, github_user, from_branch, to_branch, dry_run):
         "stolostron/clusterlifecycle-state-metrics": ["haoqing0110"],
         "stolostron/klusterlet-addon-controller": ["zhujian7", "zhiweiyin318"],
     }
-
     if repos:
-        reposmap = {repo: reposmap[repo] for repo in repos}
+        try:
+            reposmap = {repo: reposmap[repo] for repo in repos}
+        except KeyError as e:
+            print(f"Error: Repo {e} not found in the list of supported repos. please add it to the 'reposmap' dictionary manually.")
+            return
     else:
         # remove "stolostron/klusterlet-addon-controller" since its default branch is not backplane-2.8
         reposmap.pop("stolostron/klusterlet-addon-controller")
