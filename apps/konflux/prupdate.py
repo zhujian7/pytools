@@ -13,6 +13,7 @@ yaml.indent(mapping=2, sequence=2, offset=0)
 
 acm_mce_release = ["release-2.13", "backplane-2.8"]
 
+
 def local_branch_name(from_branch, to_branch):
     return f"konflux_update_{from_branch}_{to_branch}"
 
@@ -22,16 +23,17 @@ def check_upstream_remote(repo_dir, upstream_url):
     try:
         # Check if the upstream remote already exists
         result = subprocess.run(
-            ['git', '-C', repo_dir, 'remote', 'get-url', 'upstream'],
-            capture_output=True, text=True
+            ["git", "-C", repo_dir, "remote", "get-url", "upstream"],
+            capture_output=True,
+            text=True,
         )
-        
+
         # If the upstream remote does not exist, the command will fail
         if result.returncode != 0:
             print(f"Upstream remote not found. Adding upstream remote: {upstream_url}")
             subprocess.run(
-                ['git', '-C', repo_dir, 'remote', 'add', 'upstream', upstream_url],
-                check=True
+                ["git", "-C", repo_dir, "remote", "add", "upstream", upstream_url],
+                check=True,
             )
         else:
             print("Upstream remote already exists.")
@@ -40,31 +42,63 @@ def check_upstream_remote(repo_dir, upstream_url):
 
 
 # Function to create a new branch, commit changes, and push the branch
-def checkout_or_rebase_branch(repo_dir, from_branch, to_branch):
+def checkout_or_rebase_branch(repo_dir, from_branch, to_branch, push_rebase):
     local_branch = local_branch_name(from_branch, to_branch)
     # Check if the branch exists locally
     result = subprocess.run(
-        ['git', '-C', repo_dir, 'rev-parse', '--verify', local_branch],
-        capture_output=True, text=True
+        ["git", "-C", repo_dir, "rev-parse", "--verify", local_branch],
+        capture_output=True,
+        text=True,
     )
 
     if result.returncode == 0:
         # Branch exists locally, perform rebase
-        print(f"Branch {local_branch} exists locally. Rebasing with upstream/{to_branch}...")
-        subprocess.run(['git', '-C', repo_dir, 'rebase', f'upstream/{to_branch}', local_branch], check=True)
+        print(
+            f"Branch {local_branch} exists locally. Rebasing with upstream/{to_branch}..."
+        )
+        rebase_result = subprocess.run(
+            ["git", "-C", repo_dir, "rebase", f"upstream/{to_branch}", local_branch],
+            check=True,
+        )
+        # Check if there are any changes to push
+        if rebase_result.returncode == 0 and push_rebase:
+            # check if the return message contains "Successfully rebased and updated"
+            if "Successfully rebased and updated" in rebase_result.stdout:
+                print(f"Successfully rebased {local_branch} with upstream/{to_branch}.")
+                subprocess.run(
+                    ["git", "-C", repo_dir, "push", "-u", "origin", local_branch, "-f"],
+                    check=True,
+                )
+        else:
+            print(f"Error rebasing {local_branch} with upstream/{to_branch}.")
     else:
         # Branch does not exist, create and checkout new branch
-        print(f"Branch {local_branch} does not exist locally. Creating and checking out...")
-        subprocess.run(['git', '-C', repo_dir, 'checkout', '-b', local_branch, f'upstream/{to_branch}'], check=True)
+        print(
+            f"Branch {local_branch} does not exist locally. Creating and checking out..."
+        )
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                repo_dir,
+                "checkout",
+                "-b",
+                local_branch,
+                f"upstream/{to_branch}",
+            ],
+            check=True,
+        )
 
 
 # Function to clone a repo from the forked repository
-def clone_repo_from_fork(repo, fork_user, repo_dir, from_branch, to_branch):
+def clone_repo_from_fork(
+    repo, fork_user, repo_dir, from_branch, to_branch, push_rebase
+):
     # Construct the URL for the forked repository
     forked_repo_url = f"git@github.com:{fork_user}/{repo.split('/')[1]}.git"
     if not os.path.exists(repo_dir):
         print(f"Cloning {forked_repo_url} into {repo_dir}...")
-        subprocess.run(['git', 'clone', forked_repo_url, repo_dir], check=True)
+        subprocess.run(["git", "clone", forked_repo_url, repo_dir], check=True)
     # else:
     #     print(f"Repository {repo_dir} already exists. Pulling latest changes...")
     #     subprocess.run(['git', '-C', repo_dir, 'pull'], check=True)
@@ -73,24 +107,24 @@ def clone_repo_from_fork(repo, fork_user, repo_dir, from_branch, to_branch):
     original_repo_url = f"git@github.com:{repo}.git"
     check_upstream_remote(repo_dir, original_repo_url)
 
-    subprocess.run(['git', '-C', repo_dir, 'fetch', "upstream"], check=True)
+    subprocess.run(["git", "-C", repo_dir, "fetch", "upstream"], check=True)
 
-    checkout_or_rebase_branch(repo_dir, from_branch, to_branch)
+    checkout_or_rebase_branch(repo_dir, from_branch, to_branch, push_rebase)
 
 
 # Function to format a YAML file
 def format_yaml_file(file_path):
-    with open(file_path, 'r') as f:
+    with open(file_path, "r") as f:
         data = yaml.load(f)
 
     # Save changes to the YAML file
-    with open(file_path, 'w') as f:
+    with open(file_path, "w") as f:
         yaml.dump(data, f)
 
 
 # Function to format all *.yaml files in the .tekton folder
 def format_tekton_files(repo_dir, from_branch, to_branch, dry_run=False):
-    tekton_dir = os.path.join(repo_dir, '.tekton')
+    tekton_dir = os.path.join(repo_dir, ".tekton")
     if not os.path.exists(tekton_dir):
         print(f"No .tekton directory found in {repo_dir}. Skipping...")
         return ""
@@ -98,14 +132,16 @@ def format_tekton_files(repo_dir, from_branch, to_branch, dry_run=False):
     # Iterate through the files in the .tekton directory
     for root, dirs, files in os.walk(tekton_dir):
         for file in files:
-            if not file.endswith('.yaml'):
+            if not file.endswith(".yaml"):
                 continue
 
             file_path = os.path.join(root, file)
             format_yaml_file(file_path)
 
     if not has_changes(repo_dir):
-        print(f"No changes for formatting tekton files to commit in {repo_dir}. Skipping...")
+        print(
+            f"No changes for formatting tekton files to commit in {repo_dir}. Skipping..."
+        )
         return ""
     message = "Formatting all tekton files"
     commit_and_push_changes(repo_dir, from_branch, to_branch, message, dry_run)
@@ -114,7 +150,7 @@ def format_tekton_files(repo_dir, from_branch, to_branch, dry_run=False):
 
 # Function to find and replace "backplane-2.8" with "main" in .tekton files
 def update_tekton_files(repo_dir, from_branch, to_branch, dry_run=False):
-    tekton_dir = os.path.join(repo_dir, '.tekton')
+    tekton_dir = os.path.join(repo_dir, ".tekton")
     if not os.path.exists(tekton_dir):
         print(f"No .tekton directory found in {repo_dir}. Skipping...")
         return ""
@@ -122,11 +158,11 @@ def update_tekton_files(repo_dir, from_branch, to_branch, dry_run=False):
     # Iterate through the files in the .tekton directory
     for root, dirs, files in os.walk(tekton_dir):
         for file in files:
-            if not file.endswith('.yaml'):
+            if not file.endswith(".yaml"):
                 continue
 
             file_path = os.path.join(root, file)
-            with open(file_path, 'r') as f:
+            with open(file_path, "r") as f:
                 content = f.read()
 
             # Replace from_branch with to_branch
@@ -135,7 +171,7 @@ def update_tekton_files(repo_dir, from_branch, to_branch, dry_run=False):
             if source in content:
                 print(f"Updating {file_path}...")
                 updated_content = content.replace(source, target)
-                with open(file_path, 'w') as f:
+                with open(file_path, "w") as f:
                     f.write(updated_content)
 
     if not has_changes(repo_dir):
@@ -148,7 +184,7 @@ def update_tekton_files(repo_dir, from_branch, to_branch, dry_run=False):
 
 # Function to delete unnecessary files in the .tekton directory
 def purge_tekton_files(repo_dir, from_branch, to_branch, dry_run=False):
-    tekton_dir = os.path.join(repo_dir, '.tekton')
+    tekton_dir = os.path.join(repo_dir, ".tekton")
     if not os.path.exists(tekton_dir):
         print(f"No .tekton directory found in {repo_dir}. Skipping...")
         return ""
@@ -156,11 +192,11 @@ def purge_tekton_files(repo_dir, from_branch, to_branch, dry_run=False):
     # Iterate through the files in the .tekton directory
     for root, dirs, files in os.walk(tekton_dir):
         for file in files:
-            if not file.endswith('.yaml'):
+            if not file.endswith(".yaml"):
                 continue
 
             file_path = os.path.join(root, file)
-            with open(file_path, 'r') as f:
+            with open(file_path, "r") as f:
                 content = f.read()
 
             releases = [to_branch]
@@ -183,8 +219,8 @@ def purge_tekton_files(repo_dir, from_branch, to_branch, dry_run=False):
 
 def create_owners_file(repo_dir, from_branch, to_branch, dry_run=False):
     # Define the path to the OWNERS file in the .tekton directory
-    owners_file_path = os.path.join(repo_dir, '.tekton', 'OWNERS')
-    
+    owners_file_path = os.path.join(repo_dir, ".tekton", "OWNERS")
+
     # Check if the OWNERS file exists
     if os.path.exists(owners_file_path):
         return
@@ -209,11 +245,11 @@ reviewers:
 """
     # Create the .tekton directory if it doesn't exist
     os.makedirs(os.path.dirname(owners_file_path), exist_ok=True)
-        
+
     # Write the content to the OWNERS file
-    with open(owners_file_path, 'w') as f:
+    with open(owners_file_path, "w") as f:
         f.write(owners_content)
-        
+
     print("OWNERS file created successfully.")
     message = f"Create an OWNERS file for tekton files"
     commit_and_push_changes(repo_dir, from_branch, to_branch, message, dry_run)
@@ -221,20 +257,28 @@ reviewers:
 
 
 def has_changes(repo_dir):
-    result = subprocess.run(['git', '-C', repo_dir, 'diff', '--exit-code', '--quiet'], capture_output=True, text=True)
+    result = subprocess.run(
+        ["git", "-C", repo_dir, "diff", "--exit-code", "--quiet"],
+        capture_output=True,
+        text=True,
+    )
     return result.returncode != 0
 
 
 # Function to create a new branch, commit changes, and push the branch
 def commit_and_push_changes(repo_dir, from_branch, to_branch, message, dry_run=False):
-    subprocess.run(['git', '-C', repo_dir, 'add', '.'], check=True)
-    subprocess.run(['git', '-C', repo_dir, 'commit', '--signoff', '-m', message], check=True)
+    subprocess.run(["git", "-C", repo_dir, "add", "."], check=True)
+    subprocess.run(
+        ["git", "-C", repo_dir, "commit", "--signoff", "-m", message], check=True
+    )
     local_branch = local_branch_name(from_branch, to_branch)
 
     if dry_run:
         print(f"DRY-RUN: Pushing changes to {local_branch}")
         return
-    subprocess.run(['git', '-C', repo_dir, 'push', '-u', 'origin', local_branch, '-f'], check=True)
+    subprocess.run(
+        ["git", "-C", repo_dir, "push", "-u", "origin", local_branch, "-f"], check=True
+    )
 
 
 # Function to check if a PR already exists for the given branch, if exists, return the pr number
@@ -242,16 +286,32 @@ def pr_exists(repo, from_branch, to_branch):
     local_branch = local_branch_name(from_branch, to_branch)
     try:
         result = subprocess.run(
-            ['gh', 'pr', 'list', '--repo', repo, '--head', local_branch, '--json', 'number'],
-            capture_output=True, text=True, check=True
+            [
+                "gh",
+                "pr",
+                "list",
+                "--repo",
+                repo,
+                "--head",
+                local_branch,
+                "--json",
+                "number",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
         )
 
         prs = json.loads(result.stdout.strip())
         if not prs:
-            print(f"PR does not exist for branch {local_branch} in {repo}. Proceeding with PR creation.")
+            print(
+                f"PR does not exist for branch {local_branch} in {repo}. Proceeding with PR creation."
+            )
             return
-        print(f"PR already exists for branch {local_branch} in {repo}. Skipping PR creation.")
-        return prs[0]['number']
+        print(
+            f"PR already exists for branch {local_branch} in {repo}. Skipping PR creation."
+        )
+        return prs[0]["number"]
     except subprocess.CalledProcessError as e:
         print(f"Error checking for existing PRs in {repo}: {e}")
         return
@@ -261,10 +321,19 @@ def pr_exists(repo, from_branch, to_branch):
 def comment_cc(repo, pr_number, owners):
     try:
         # Using gh command to comment "/cc @user1 @user2" on the PR
-        owners_mention = ' '.join([f'@{owner}' for owner in owners])
+        owners_mention = " ".join([f"@{owner}" for owner in owners])
         subprocess.run(
-            ['gh', 'pr', 'comment', str(pr_number), '--repo', repo, '--body', f"/cc {owners_mention}"],
-            check=True
+            [
+                "gh",
+                "pr",
+                "comment",
+                str(pr_number),
+                "--repo",
+                repo,
+                "--body",
+                f"/cc {owners_mention}",
+            ],
+            check=True,
         )
         print(f"Successfully commented '/cc' on PR #{pr_number} in {repo}.")
     except subprocess.CalledProcessError as e:
@@ -272,20 +341,39 @@ def comment_cc(repo, pr_number, owners):
 
 
 # Function to create a PR and cc the owner to review
-def create_pull_request(repo, github_user, from_branch, to_branch, messages, owners, dry_run=False):
+def create_pull_request(
+    repo, github_user, from_branch, to_branch, messages, owners, dry_run=False
+):
     if dry_run:
-        print(f"DRY-RUN: Creating PR for {repo} with branch {local_branch_name(from_branch, to_branch)}")
+        print(
+            f"DRY-RUN: Creating PR for {repo} with branch {local_branch_name(from_branch, to_branch)}"
+        )
         return
     local_branch = local_branch_name(from_branch, to_branch)
     body = construct_pr_body(repo, from_branch, to_branch, messages)
     try:
         result = subprocess.run(
-            ['gh', 'pr', 'create', '--repo', repo, '--head', f'{github_user}:{local_branch}', '--base', to_branch,
-             '--title', f':seedling: [{to_branch}] update konflux files', '--body', body],
-            check=True
+            [
+                "gh",
+                "pr",
+                "create",
+                "--repo",
+                repo,
+                "--head",
+                f"{github_user}:{local_branch}",
+                "--base",
+                to_branch,
+                "--title",
+                f":seedling: [{to_branch}] update konflux files",
+                "--body",
+                body,
+            ],
+            check=True,
         )
         # get PR number from the result
-        print(f"PR created successfully for {repo} with branch {local_branch}. stdout: {result}")
+        print(
+            f"PR created successfully for {repo} with branch {local_branch}. stdout: {result}"
+        )
 
         pr_number = pr_exists(repo, from_branch, to_branch)
         if pr_number:
@@ -304,15 +392,41 @@ def construct_pr_body(repo, from_branch, to_branch, messages):
 
 # Main function
 @click.command()
-@click.argument('repos', nargs=-1)  # Accepts multiple repositories as arguments
-@click.option('--github_user', type=click.STRING, default='zhujian7', prompt='Your github user name', help="The GitHub username of the forked repository")
-@click.option('--from_branch', type=click.STRING, default='backplane-2.8', help="The branch name of the konflux CEL to be updated from")
-@click.option('--to_branch', type=click.STRING, default='main', help="The branch name of the konflux CEL to be updated to")
-@click.option("--dry-run", is_flag=True, default=False, help="set to true will not create PR and push changes")
-def main(repos, github_user, from_branch, to_branch, dry_run):
+@click.argument("repos", nargs=-1)  # Accepts multiple repositories as arguments
+@click.option(
+    "--github_user",
+    type=click.STRING,
+    default="zhujian7",
+    prompt="Your github user name",
+    help="The GitHub username of the forked repository",
+)
+@click.option(
+    "--from_branch",
+    type=click.STRING,
+    default="backplane-2.8",
+    help="The branch name of the konflux CEL to be updated from",
+)
+@click.option(
+    "--to_branch",
+    type=click.STRING,
+    default="main",
+    help="The branch name of the konflux CEL to be updated to",
+)
+@click.option(
+    "--push_rebase",
+    is_flag=True,
+    default=False,
+    help="set to true will push the rebase changes to the branch even if there is no other change",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="set to true will not create PR and push changes",
+)
+def main(repos, github_user, from_branch, to_branch, push_rebase, dry_run):
     reposmap = {
         # supportted repos, repo: owners
-        
         "stolostron/ocm": ["zhujian7", "xuezhaojun"],
         "stolostron/managed-serviceaccount": ["zhujian7", "xuezhaojun"],
         "stolostron/multicloud-operators-foundation": ["elgnay"],
@@ -326,13 +440,17 @@ def main(repos, github_user, from_branch, to_branch, dry_run):
         try:
             reposmap = {repo: reposmap[repo] for repo in repos}
         except KeyError as e:
-            print(f"Error: Repo {e} not found in the list of supported repos. please add it to the 'reposmap' dictionary manually.")
+            print(
+                f"Error: Repo {e} not found in the list of supported repos. please add it to the 'reposmap' dictionary manually."
+            )
             return
     else:
         # remove "stolostron/klusterlet-addon-controller" since its default branch is not backplane-2.8
         reposmap.pop("stolostron/klusterlet-addon-controller")
 
-    print(f"Repos: {reposmap}, GitHub User: {github_user}, From Branch: {from_branch}, To Branch: {to_branch}")
+    print(
+        f"Repos: {reposmap}, GitHub User: {github_user}, From Branch: {from_branch}, To Branch: {to_branch}"
+    )
 
     tmp_dir = "_tmp"
     # Ensure the temporary directory exists
@@ -342,13 +460,22 @@ def main(repos, github_user, from_branch, to_branch, dry_run):
     # for repo in repos:
     for repo, owners in reposmap.items():
         repo_url = repo
-        repo_dir = os.path.join(tmp_dir, repo.split('/')[1]) # Use repo name as directory name
+        repo_dir = os.path.join(
+            tmp_dir, repo.split("/")[1]
+        )  # Use repo name as directory name
 
         # Step 1: Clone the repository from the forked version
-        clone_repo_from_fork(repo, github_user, repo_dir, from_branch, to_branch)
+        clone_repo_from_fork(
+            repo, github_user, repo_dir, from_branch, to_branch, push_rebase
+        )
 
         # # Step 2: Modify files in the .tekton folder
-        funcs = [format_tekton_files, update_tekton_files, create_owners_file, purge_tekton_files]
+        funcs = [
+            format_tekton_files,
+            update_tekton_files,
+            create_owners_file,
+            purge_tekton_files,
+        ]
         # funcs = [format_tekton_files, update_tekton_files, create_owners_file]
         messages = []
         for func in funcs:
@@ -359,8 +486,10 @@ def main(repos, github_user, from_branch, to_branch, dry_run):
         # Step 4: Check if a PR already exists for the branch
         if not pr_exists(repo, from_branch, to_branch):
             # If no PR exists, create one
-            create_pull_request(repo, github_user, from_branch, to_branch, messages, owners, dry_run)
+            create_pull_request(
+                repo, github_user, from_branch, to_branch, messages, owners, dry_run
+            )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
