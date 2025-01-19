@@ -218,6 +218,11 @@ def purge_tekton_files(repo_dir, from_branch, to_branch, dry_run=False):
 
 
 def create_owners_file(repo_dir, from_branch, to_branch, dry_run=False):
+    # Check if .tekton folder exists
+    if not os.path.exists(os.path.join(repo_dir, ".tekton")):
+        print(f"No .tekton directory found in {repo_dir}. Skipping...")
+        return
+
     # Define the path to the OWNERS file in the .tekton directory
     owners_file_path = os.path.join(repo_dir, ".tekton", "OWNERS")
 
@@ -459,7 +464,6 @@ def main(repos, github_user, from_branch, to_branch, push_rebase, dry_run):
 
     # for repo in repos:
     for repo, owners in reposmap.items():
-        repo_url = repo
         repo_dir = os.path.join(
             tmp_dir, repo.split("/")[1]
         )  # Use repo name as directory name
