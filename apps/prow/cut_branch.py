@@ -49,7 +49,7 @@ def handle_one_repo(repo_config_dir, old_release, new_release):
     help="the local path to the openshift/release repo",
 )
 # Main function to configure acm repos for the new release
-# Example usage: python -m apps.prow.cut_branch ocm,managedcluster-import-controller
+# Example usage: python -m apps.prow.cut_branch ocm managedcluster-import-controller
 def main(repos, path):
 
     reposmap = {
