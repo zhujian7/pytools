@@ -11,6 +11,7 @@ yaml.preserve_quotes = True
 yaml.width = 256
 yaml.indent(mapping=2, sequence=2, offset=0)
 
+# TODO: update every release starts
 acm_mce_release = ["release-2.13", "backplane-2.8"]
 
 
@@ -148,7 +149,7 @@ def format_tekton_files(repo_dir, from_branch, to_branch, dry_run=False):
     return message
 
 
-# Function to find and replace "backplane-2.8" with "main" in .tekton files
+# Function to find and replace branch in .tekton files
 def update_tekton_files(repo_dir, from_branch, to_branch, dry_run=False):
     tekton_dir = os.path.join(repo_dir, ".tekton")
     if not os.path.exists(tekton_dir):
@@ -408,7 +409,7 @@ def construct_pr_body(repo, from_branch, to_branch, messages):
 @click.option(
     "--from_branch",
     type=click.STRING,
-    default="backplane-2.8",
+    default="backplane-2.8",  # TODO: update every release starts
     help="The branch name of the konflux CEL to be updated from",
 )
 @click.option(
@@ -450,7 +451,7 @@ def main(repos, github_user, from_branch, to_branch, push_rebase, dry_run):
             )
             return
     else:
-        # remove "stolostron/klusterlet-addon-controller" since its default branch is not backplane-2.8
+        # remove "stolostron/klusterlet-addon-controller" since its default branch is not backplane-*
         reposmap.pop("stolostron/klusterlet-addon-controller")
 
     print(

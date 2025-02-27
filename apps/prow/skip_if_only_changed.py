@@ -82,8 +82,8 @@ def handle_one_repo(repo_config_dir):
     default="/Users/jiazhu/go/src/github.com/openshift/release",
     help="the local path to the openshift/release repo",
 )
-# Main function to list and modify PRs
-# Example usage: python -m apps.konfluxprreview --approve --seedling --extra-keyword="Konflux Test" stolostron/ocm stolostron/managed-serviceaccount
+# Main function to configure acm repos skip tests if only non-code files change
+# Example usage: python -m apps.prow.skip_if_only_changed ocm,managedcluster-import-controller
 def main(repos, path):
     # if repos is not provided, use the default list
     if not repos:

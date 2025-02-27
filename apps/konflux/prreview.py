@@ -240,6 +240,7 @@ def all_files_in_tekton(files):
 # Main function to list and modify PRs
 # Example usage: python -m apps.konflux.prreview --approve --seedling --extra-keyword="Konflux Test" stolostron/ocm stolostron/managed-serviceaccount
 def main(repos, approve, seedling, check_status, extra_keyword):
+    # TODO: update every release starts
     branches_before_changing = ["backplane-2.8", "release-2.13"]
     branch_after_changing = "main"
     print(
